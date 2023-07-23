@@ -1,19 +1,18 @@
 #include <Arduino.h>
+#include <avr/wdt.h>
+#include <avr/sleep.h>
+#include <avr/interrupt.h>
 
 #define PERIOD_TIME 60 * 60 * 24 * 3   // period in seconds - 3 days
-#define WORK_TIME 20
+#define WORK_TIME 28
 #define PIN_MOSFET 1
 
 uint32_t mainTimer = 0;
 uint32_t myTimer = 0;
 boolean state = false;
 
-#include <avr/wdt.h>
-#include <avr/sleep.h>
-#include <avr/interrupt.h>
 #define adc_disable() (ADCSRA &= ~(1<<ADEN)) // disable ADC (before power-off)
 #define adc_enable()  (ADCSRA |=  (1<<ADEN)) // re-enable ADC
-
 
 void setup() {
   // all pins - input for power saving
