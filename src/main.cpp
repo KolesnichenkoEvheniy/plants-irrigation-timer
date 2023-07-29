@@ -7,7 +7,7 @@
 
 #define PERIOD_TIME 259200000 // 60 * 60 * 24 * 3 * 1000   // period in seconds - 3 days
 #define WORK_TIME 25000 
-#define PIN_MOSFET 1
+#define PIN_MOSFET PB1
 #define PIN_BTN_MANUAL PB2
 
 boolean state = false;
