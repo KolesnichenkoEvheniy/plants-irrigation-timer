@@ -5,7 +5,7 @@
 #include <avr/interrupt.h>
 #include <avr/io.h>
 
-#define PERIOD_TIME 60 * 60 * 24 * 3    // period in seconds - 3 days
+#define PERIOD_TIME 60 * 60 * 24 * 3 * 1000   // period in seconds - 3 days
 #define WORK_TIME 25 * 1000 
 #define PIN_MOSFET 1
 #define PIN_BTN_MANUAL PB2
