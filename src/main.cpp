@@ -58,7 +58,7 @@ void setup() {
   power.setSleepMode(IDLE_SLEEP);
   adc_disable(); // power saving
 
-  btnManual.setTickMode(AUTO);
+  //btnManual.setTickMode(AUTO);
 
   // wdt_reset(); // watchdog init
   // // 15MS, 30MS, 60MS, 120MS, 250MS, 500MS, 1S, 2S, 4S, 8S
@@ -79,8 +79,9 @@ void loop() {
   static uint32_t tmr;
   unsigned long currentMillis = millis();
 
-  //serial.println("Loop.. " + String(millis()));
+  serial.println("Loop.. " + String(millis()));
 
+  btnManual.tick();
   if (btnManual.isClick() || btnManual.isHold()) {
     serial.println("Button click...");
       workTimer = currentMillis;
@@ -114,7 +115,8 @@ void loop() {
 
   // sleep_enable(); // allow sleep
   // sleep_cpu();// sleep
-  power.sleep(SLEEP_4096MS);
+  power.sleepDelay(4000);
+  //power.sleep(SLEEP_8192MS);
 
   serial.println("wake up!");
 }
