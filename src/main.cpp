@@ -6,8 +6,6 @@
 #include <avr/io.h>
 #include <SoftwareSerial.h>
 
-#define MILLIS_CORRECT_IS_SUPPURT true
-#define __AVR_ATtiny85__
 #include <GyverButton.h>
 #include <GyverPower.h>
 
