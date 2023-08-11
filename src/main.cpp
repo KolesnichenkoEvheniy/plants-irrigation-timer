@@ -6,9 +6,9 @@
 #include <avr/io.h>
 #include <SoftwareSerial.h>
 
-#define PERIOD_TIME 259200000//60 * 60 * 24 * 3 * 1000   // period in seconds - 3 days
-#define WORK_TIME 25000
-#define SERIAL_DEBUG_TIME 20000
+#define PERIOD_TIME 5000//60 * 60 * 24 * 3 * 1000   // period in seconds - 3 days
+#define WORK_TIME 5000
+#define SERIAL_DEBUG_TIME 2000
 #define PIN_MOSFET PB1
 #define PIN_BTN_MANUAL PB2
 
