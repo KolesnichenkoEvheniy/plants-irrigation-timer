@@ -1,11 +1,3 @@
-
-/*
-SetTime.ino sketch to set the time of DS1307 RTC - created by Paul Stoffregen
-github.com/PaulStoffregen/DS1307RTC/blob/master/examples/SetTime/SetTime.ino
- */
-
-#define __AVR_ATtiny85__
-
 #include <Arduino.h> 
 #include <avr/wdt.h>
 #include <avr/sleep.h>
@@ -40,11 +32,6 @@ boolean state = false;
 
 bool getTime(const char *str);
 bool getDate(const char *str);
-
-// void isr() {
-//   serial.println("ISR");
-//   manualFlag = true;
-// }
 
 void setup() {
   bool parse=false;
