@@ -2,7 +2,6 @@
 #include <avr/wdt.h>
 #include <avr/sleep.h>
 #include <avr/power.h>
-#include <TimeAlarms.h>
 #include <DS1307RTC.h>
 #include <TinyWireM.h>
 #include <SoftwareSerial.h>
@@ -55,7 +54,6 @@ void setup() {
   // 15MS, 30MS, 60MS, 120MS, 250MS, 500MS, 1S, 2S, 4S, 8S
   wdt_enable(WDTO_4S); // watchdog conf
 
-  // attachInterrupt(digitalPinToInterrupt(PIN_BTN_MANUAL), isr, FALLING);
   WDTCR |= _BV(WDIE);     // enable watchdog interrupt
   GIMSK |= (1<<INT0); // enabling the INT0 (external interrupt) 
   PCMSK |= _BV(PCINT3); // enabling external interrupt on Pin PB2
@@ -74,38 +72,11 @@ void printDigits(int digits) {
 void loop() {
   // static unsigned long periodTimer = 0;
   static unsigned long workTimer = 0;
-  // static unsigned long debugTimer = 0;
-  // static unsigned long beforeNextEvent = 0;
-  // unsigned long currentMillis = millis();
-
-  // if (currentMillis - debugTimer >= SERIAL_DEBUG_TIME) {
-  //   debugTimer = currentMillis;
-
-    
-  // }
-  // if (!state){
-  //     serial.print("Before next irrigation: ");
-  //     beforeNextEvent = 0.001 * ((periodTimer + PERIOD_TIME) - currentMillis);
-  //     serial.print(String( beforeNextEvent));
-  //   } else {
-  //     serial.print("Before Stop: ");
-  //     beforeNextEvent = 0.001 * ((workTimer + WORK_TIME) - currentMillis);
-  //     serial.print(String( beforeNextEvent ));
-  //   }
-    
-    setSyncProvider(RTC.get);  
-    serial.print("Configured Time=");
-      serial.print(hour());
-    printDigits(minute());
-    printDigits(second());
-    serial.println();
-
-  //serial.println(digitalRead(PIN_BTN_MANUAL) == LOW ? "MNL" : "NO");
-  if (manualFlag/*&& !state*/) {
-    // serial.println("!!!Button click...");
-    //serial.println(digitalRead(PIN_BTN_MANUAL) ? "MNL" : "NO");
-    // workTimer = currentMillis;
-    // periodTimer = currentMillis; do not reset period on manual mode
+  static tmElements_t now;
+ 
+  if (manualFlag && !state) {
+    serial.println("!!!Button click...");
+    workTimer = millis();
 
     state = true;
     pinMode(PIN_MOSFET, OUTPUT);
@@ -114,10 +85,21 @@ void loop() {
   }
 
   static byte prevMin = 0;
-  if (!state && prevMin != minute()) {
-    prevMin = minute();
+
+  if (!state) {
+    if (!RTC.read(now)) {
+      serial.println("ERR RTC READ");
+    }
+  }
+
+  if (!state && prevMin != now.Minute) {
+    serial.print("Current time: ");
+    serial.print(now.Hour);
+    printDigits(now.Minute);
+
+    prevMin = now.Minute;
     for (byte i = 0; i < sizeof(schedule) / 2; i++) {
-      if (schedule[i][2] == day() && schedule[i][0] == hour() && schedule[i][1] == minute()) {
+      if (schedule[i][2] == now.Wday && schedule[i][0] == now.Hour && schedule[i][1] == now.Minute) {
         state = true;
         workTimer = millis();
         pinMode(PIN_MOSFET, OUTPUT);
@@ -127,30 +109,18 @@ void loop() {
   }
 
   if (state && millis() - workTimer >= WORK_TIME) {
-    // serial.println("Start irrigation...");
     workTimer = millis();
     state = false;
     digitalWrite(PIN_MOSFET, LOW);
     pinMode(PIN_MOSFET, INPUT); // power saving
   }
 
-  // if (!state) {
-  //   if (currentMillis - periodTimer >= PERIOD_TIME) {
-  //     // serial.println("Start irrigation...");
-  //     periodTimer = currentMillis;
-  //     workTimer = currentMillis;
-      
-  //   }
-  // } else {
-    if (millis() - workTimer >= WORK_TIME) {
-      // serial.println("Stop irrigation...");
-      workTimer = millis();
-      // periodTimer = currentMillis;
-      state = false;
-      digitalWrite(PIN_MOSFET, LOW);
-      pinMode(PIN_MOSFET, INPUT); // power saving
-    }
-  // }
+  if (millis() - workTimer >= WORK_TIME) {
+    workTimer = millis();
+    state = false;
+    digitalWrite(PIN_MOSFET, LOW);
+    pinMode(PIN_MOSFET, INPUT); // power saving
+  }
 
   if (!state) {
     sleep_enable(); // allow sleep
