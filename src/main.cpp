@@ -18,14 +18,12 @@
 #define adc_disable() (ADCSRA &= ~(1<<ADEN)) // disable ADC (before power-off)
 #define adc_enable()  (ADCSRA |=  (1<<ADEN)) // re-enable ADC
 
-const char *monthName[12] = {
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+const byte schedule[][3] = {
+  {0, 7, 0},
+  {0, 12, 0},
 };
 
-tmElements_t tm;
 SoftwareSerial serial(1, 4);
-// SoftwareSerial serial(0, 0);
 volatile uint8_t portbhistory = 0xFF;     // default is high because the pull-up
 volatile boolean manualFlag = false;
 boolean state = false;
@@ -36,7 +34,7 @@ bool getDate(const char *str);
 void setup() {
   serial.begin(9600);
   while (!serial) ; // wait for Arduino Serial Monitor
-  delay(1000);
+  delay(200);
   Wire.begin();
 
   pinMode(PIN_MOSFET, OUTPUT);
@@ -48,12 +46,10 @@ void setup() {
 
   if (timeStatus() != timeSet) {
     serial.println("Unable to sync with the RTC");
-  } else {
-    serial.println("RTC has set the system time");
   }
 
-  serial.println("Chip status: ");
-  serial.println(RTC.chipPresent());
+  // serial.println("Chip status: ");
+  // serial.println(RTC.chipPresent());
 
   wdt_reset(); // watchdog init
   // 15MS, 30MS, 60MS, 120MS, 250MS, 500MS, 1S, 2S, 4S, 8S
@@ -69,32 +65,33 @@ void setup() {
 
 void printDigits(int digits) {
   serial.print(":");
-  if (digits < 10)
+  if (digits < 10) {
     serial.print('0');
+  }
   serial.print(digits);
 }
 
 void loop() {
-  static unsigned long periodTimer = 0;
+  // static unsigned long periodTimer = 0;
   static unsigned long workTimer = 0;
-  static unsigned long debugTimer = 0;
-  static unsigned long beforeNextEvent = 0;
-  unsigned long currentMillis = millis();
+  // static unsigned long debugTimer = 0;
+  // static unsigned long beforeNextEvent = 0;
+  // unsigned long currentMillis = millis();
 
-  if (true || currentMillis - debugTimer >= SERIAL_DEBUG_TIME) {
-    debugTimer = currentMillis;
+  // if (currentMillis - debugTimer >= SERIAL_DEBUG_TIME) {
+  //   debugTimer = currentMillis;
 
-    if (!state){
-      serial.print("Before next irrigation: ");
-      beforeNextEvent = 0.001 * ((periodTimer + PERIOD_TIME) - currentMillis);
-      serial.print(String( beforeNextEvent));
-    } else {
-      serial.print("Before Stop: ");
-      beforeNextEvent = 0.001 * ((workTimer + WORK_TIME) - currentMillis);
-      serial.print(String( beforeNextEvent ));
-    }
-    serial.print("s");
-    serial.println("");
+    
+  // }
+  // if (!state){
+  //     serial.print("Before next irrigation: ");
+  //     beforeNextEvent = 0.001 * ((periodTimer + PERIOD_TIME) - currentMillis);
+  //     serial.print(String( beforeNextEvent));
+  //   } else {
+  //     serial.print("Before Stop: ");
+  //     beforeNextEvent = 0.001 * ((workTimer + WORK_TIME) - currentMillis);
+  //     serial.print(String( beforeNextEvent ));
+  //   }
     
     setSyncProvider(RTC.get);  
     serial.print("Configured Time=");
@@ -102,12 +99,10 @@ void loop() {
     printDigits(minute());
     printDigits(second());
     serial.println();
-    // manualFlag = true;
-  }
 
   //serial.println(digitalRead(PIN_BTN_MANUAL) == LOW ? "MNL" : "NO");
   if (manualFlag/*&& !state*/) {
-    serial.println("!!!Button click...");
+    // serial.println("!!!Button click...");
     //serial.println(digitalRead(PIN_BTN_MANUAL) ? "MNL" : "NO");
     // workTimer = currentMillis;
     // periodTimer = currentMillis; do not reset period on manual mode
@@ -118,57 +113,50 @@ void loop() {
     manualFlag = false;
   }
 
-  if (!state) {
-    if (currentMillis - periodTimer >= PERIOD_TIME) {
-      serial.println("Start irrigation...");
-      periodTimer = currentMillis;
-      workTimer = currentMillis;
-      state = true;
-      pinMode(PIN_MOSFET, OUTPUT);
-      digitalWrite(PIN_MOSFET, HIGH);
+  static byte prevMin = 0;
+  if (!state && prevMin != minute()) {
+    prevMin = minute();
+    for (byte i = 0; i < sizeof(schedule) / 2; i++) {
+      if (schedule[i][2] == day() && schedule[i][0] == hour() && schedule[i][1] == minute()) {
+        state = true;
+        workTimer = millis();
+        pinMode(PIN_MOSFET, OUTPUT);
+        digitalWrite(PIN_MOSFET, HIGH);
+      }
     }
-  } else {
-    if (currentMillis - workTimer >= WORK_TIME) {
-      serial.println("Stop irrigation...");
-      workTimer = currentMillis;
-      periodTimer = currentMillis;
+  }
+
+  if (state && millis() - workTimer >= WORK_TIME) {
+    // serial.println("Start irrigation...");
+    workTimer = millis();
+    state = false;
+    digitalWrite(PIN_MOSFET, LOW);
+    pinMode(PIN_MOSFET, INPUT); // power saving
+  }
+
+  // if (!state) {
+  //   if (currentMillis - periodTimer >= PERIOD_TIME) {
+  //     // serial.println("Start irrigation...");
+  //     periodTimer = currentMillis;
+  //     workTimer = currentMillis;
+      
+  //   }
+  // } else {
+    if (millis() - workTimer >= WORK_TIME) {
+      // serial.println("Stop irrigation...");
+      workTimer = millis();
+      // periodTimer = currentMillis;
       state = false;
       digitalWrite(PIN_MOSFET, LOW);
       pinMode(PIN_MOSFET, INPUT); // power saving
     }
+  // }
+
+  if (!state) {
+    sleep_enable(); // allow sleep
+    sleep_cpu();// sleep
   }
-
-  sleep_enable(); // allow sleep
-  sleep_cpu();// sleep
 }
-
-// bool getTime(const char *str)
-// {
-//   int Hour, Min, Sec;
-
-//   if (sscanf(str, "%d:%d:%d", &Hour, &Min, &Sec) != 3) return false;
-//   tm.Hour = Hour;
-//   tm.Minute = Min;
-//   tm.Second = Sec;
-//   return true;
-// }
-
-// bool getDate(const char *str)
-// {
-//   char Month[12];
-//   int Day, Year;
-//   uint8_t monthIndex;
-
-//   if (sscanf(str, "%s %d %d", Month, &Day, &Year) != 3) return false;
-//   for (monthIndex = 0; monthIndex < 12; monthIndex++) {
-//     if (strcmp(Month, monthName[monthIndex]) == 0) break;
-//   }
-//   if (monthIndex >= 12) return false;
-//   tm.Day = Day;
-//   tm.Month = monthIndex + 1;
-//   tm.Year = CalendarYrToTm(Year);
-//   return true;
-// }
 
 ISR (WDT_vect) {
   WDTCR |= _BV(WDIE); // allow interrupt by watchdog
@@ -181,9 +169,7 @@ ISR (INT0_vect)
     changedbits = PINB ^ portbhistory;
     portbhistory = PINB;
 
-    if(changedbits & (1 << PB3))
-    {
-      serial.println("ISR INT0_vecxt");
+    if(changedbits & (1 << PB3)) {
       manualFlag = true;
     }
 }
