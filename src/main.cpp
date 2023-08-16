@@ -77,10 +77,8 @@ void loop() {
 
   static byte prevMin = 0;
 
-  if (!state) {
-    if (!RTC.read(now)) {
-      serial.println("ERR RTC READ");
-    }
+  if (!state && !RTC.read(now)) {
+    serial.println("ERR RTC READ");
   }
 
   serial.print("CURR TIME: "); serial.print(now.Hour); serial.print(" : "); serial.print(now.Minute);
