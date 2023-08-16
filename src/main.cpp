@@ -53,7 +53,7 @@ void setup() {
 
   wdt_reset(); // watchdog init
   // 15MS, 30MS, 60MS, 120MS, 250MS, 500MS, 1S, 2S, 4S, 8S
-  wdt_enable(WDTO_4S); // watchdog conf
+  wdt_enable(WDTO_8S); // watchdog conf
 
   WDTCR |= _BV(WDIE);     // enable watchdog interrupt
   GIMSK |= (1<<INT0); // enabling the INT0 (external interrupt) 
