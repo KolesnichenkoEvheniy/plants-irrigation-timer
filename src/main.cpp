@@ -18,13 +18,14 @@
 #define adc_enable()  (ADCSRA |=  (1<<ADEN)) // re-enable ADC
 
 const byte schedule[][3] = {
-  {0, 7, 0},
-  {0, 12, 0},
+  {dowSaturday, 7, 0},
+  {dowWednesday, 12, 0},
 };
 
 SoftwareSerial serial(1, 4);
 volatile uint8_t portbhistory = 0xFF;     // default is high because the pull-up
 volatile boolean manualFlag = false;
+static unsigned long workTimer = 0;
 boolean state = false;
 
 bool getTime(const char *str);
@@ -61,17 +62,7 @@ void setup() {
   set_sleep_mode(SLEEP_MODE_PWR_DOWN);
 }
 
-void printDigits(int digits) {
-  serial.print(":");
-  if (digits < 10) {
-    serial.print('0');
-  }
-  serial.print(digits);
-}
-
 void loop() {
-  // static unsigned long periodTimer = 0;
-  static unsigned long workTimer = 0;
   static tmElements_t now;
  
   if (manualFlag && !state) {
@@ -92,14 +83,11 @@ void loop() {
     }
   }
 
+  serial.print("CURR TIME: "); serial.print(now.Hour); serial.print(" : "); serial.print(now.Minute);
   if (!state && prevMin != now.Minute) {
-    serial.print("Current time: ");
-    serial.print(now.Hour);
-    printDigits(now.Minute);
-
     prevMin = now.Minute;
-    for (byte i = 0; i < sizeof(schedule) / 2; i++) {
-      if (schedule[i][2] == now.Wday && schedule[i][0] == now.Hour && schedule[i][1] == now.Minute) {
+    for (byte i = 0; i < sizeof(schedule) / 3; i++) {
+      if (schedule[i][0] == now.Wday && schedule[i][1] == now.Hour && schedule[i][2] == now.Minute) {
         state = true;
         workTimer = millis();
         pinMode(PIN_MOSFET, OUTPUT);
