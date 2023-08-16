@@ -26,10 +26,11 @@ SoftwareSerial serial(1, 4);
 volatile uint8_t portbhistory = 0xFF;     // default is high because the pull-up
 volatile boolean manualFlag = false;
 static unsigned long workTimer = 0;
-boolean state = false;
+boolean currentPumpState = false;
 
 bool getTime(const char *str);
 bool getDate(const char *str);
+void setPumpStatus(bool status);
 
 void setup() {
   serial.begin(9600);
@@ -65,53 +66,51 @@ void setup() {
 void loop() {
   static tmElements_t now;
  
-  if (manualFlag && !state) {
+  if (manualFlag && !currentPumpState) {
     serial.println("!!!Button click...");
     workTimer = millis();
 
-    state = true;
-    pinMode(PIN_MOSFET, OUTPUT);
-    digitalWrite(PIN_MOSFET, HIGH);
     manualFlag = false;
+    setPumpStatus(true);
   }
 
   static byte prevMin = 0;
 
-  if (!state && !RTC.read(now)) {
+  if (!currentPumpState && !RTC.read(now)) {
     serial.println("ERR RTC READ");
   }
 
   serial.print("CURR TIME: "); serial.print(now.Hour); serial.print(" : "); serial.print(now.Minute);
-  if (!state && prevMin != now.Minute) {
+  if (!currentPumpState && prevMin != now.Minute) {
     prevMin = now.Minute;
     for (byte i = 0; i < sizeof(schedule) / 3; i++) {
       if (schedule[i][0] == now.Wday && schedule[i][1] == now.Hour && schedule[i][2] == now.Minute) {
-        state = true;
         workTimer = millis();
-        pinMode(PIN_MOSFET, OUTPUT);
-        digitalWrite(PIN_MOSFET, HIGH);
+        setPumpStatus(true);
       }
     }
   }
 
-  if (state && millis() - workTimer >= WORK_TIME) {
+  if (currentPumpState && millis() - workTimer >= WORK_TIME) {
     workTimer = millis();
-    state = false;
-    digitalWrite(PIN_MOSFET, LOW);
-    pinMode(PIN_MOSFET, INPUT); // power saving
+    setPumpStatus(false);
   }
 
-  if (millis() - workTimer >= WORK_TIME) {
-    workTimer = millis();
-    state = false;
-    digitalWrite(PIN_MOSFET, LOW);
-    pinMode(PIN_MOSFET, INPUT); // power saving
-  }
-
-  if (!state) {
+  if (!currentPumpState) {
     sleep_enable(); // allow sleep
     sleep_cpu();// sleep
   }
+}
+
+void setPumpStatus(bool newState) {
+  currentPumpState = newState;
+  if (newState == true) {
+    pinMode(PIN_MOSFET, OUTPUT);
+    digitalWrite(PIN_MOSFET, HIGH);
+    return;
+  }
+  digitalWrite(PIN_MOSFET, LOW);
+  pinMode(PIN_MOSFET, INPUT); // power saving
 }
 
 ISR (WDT_vect) {
