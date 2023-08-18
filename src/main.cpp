@@ -5,12 +5,11 @@
 #include <DS1307RTC.h>
 #include <TinyWireM.h>
 #include <SoftwareSerial.h>
+#include <EncButton.h>
 
 #define PIN_MOSFET PB1
 #define PIN_BTN_MANUAL PB3
-#define PERIOD_TIME 7000//60 * 60 * 24 * 3 * 1000   // period in seconds - 3 days
 #define WORK_TIME 3000
-#define SERIAL_DEBUG_TIME 2000
 
 #define Wire TinyWireM
 
@@ -20,9 +19,10 @@
 const byte schedule[][3] = {
   {dowSaturday, 7, 0},
   {dowWednesday, 12, 0},
+  {dowFriday, 20, 37},
 };
 
-SoftwareSerial serial(1, 4);
+SoftwareSerial serial(5, 4);
 volatile uint8_t portbhistory = 0xFF;     // default is high because the pull-up
 volatile boolean manualFlag = false;
 static unsigned long workTimer = 0;
@@ -31,6 +31,8 @@ boolean currentPumpState = false;
 bool getTime(const char *str);
 bool getDate(const char *str);
 void setPumpStatus(bool status);
+
+EncButton<EB_TICK, PIN_BTN_MANUAL> manualBtn;
 
 void setup() {
   serial.begin(9600);
@@ -64,9 +66,8 @@ void setup() {
 }
 
 void loop() {
-  static tmElements_t now;
- 
-  if (manualFlag && !currentPumpState) {
+  manualBtn.tick();
+  if (manualBtn.isClick() && !currentPumpState) {
     serial.println("!!!Button click...");
     workTimer = millis();
 
@@ -75,34 +76,38 @@ void loop() {
   }
 
   static byte prevMin = 0;
+  static byte currentMin = 0;
+  currentMin = minute();
 
-  if (!currentPumpState && !RTC.read(now)) {
-    serial.println("ERR RTC READ");
+  if (!currentPumpState) {
+    setSyncProvider(RTC.get);
   }
 
-  serial.print("CURR TIME: "); serial.print(now.Hour); serial.print(" : "); serial.print(now.Minute);
-  if (!currentPumpState && prevMin != now.Minute) {
-    prevMin = now.Minute;
+  serial.println("CURR TIME: "); serial.print(hour()); serial.print(":"); serial.print(minute());
+  if (!currentPumpState && prevMin != currentMin) {
+    prevMin = currentMin;
     for (byte i = 0; i < sizeof(schedule) / 3; i++) {
-      if (schedule[i][0] == now.Wday && schedule[i][1] == now.Hour && schedule[i][2] == now.Minute) {
+      if (schedule[i][0] == weekday() && schedule[i][1] == hour() && schedule[i][2] == minute()) {
+        serial.println("Enabling the pump...");
         workTimer = millis();
         setPumpStatus(true);
       }
     }
   }
 
-  if (currentPumpState && millis() - workTimer >= WORK_TIME) {
+  if (currentPumpState && (millis() - workTimer >= WORK_TIME)) {
     workTimer = millis();
     setPumpStatus(false);
   }
 
-  if (!currentPumpState) {
+  if (!currentPumpState && !manualFlag) {
     sleep_enable(); // allow sleep
     sleep_cpu();// sleep
   }
 }
 
 void setPumpStatus(bool newState) {
+  serial.println("Change status: "); serial.print(newState);
   currentPumpState = newState;
   if (newState == true) {
     pinMode(PIN_MOSFET, OUTPUT);
@@ -126,5 +131,6 @@ ISR (INT0_vect)
 
     if(changedbits & (1 << PB3)) {
       manualFlag = true;
+      manualBtn.tickISR();
     }
 }
