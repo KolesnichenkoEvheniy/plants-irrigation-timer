@@ -9,6 +9,8 @@
 
 #define PIN_MOSFET PB1
 #define PIN_BTN_MANUAL PB3
+#define PIN_UART_TX PB4
+#define PIN_UART_RX PB5
 #define WORK_TIME 3000
 
 #define Wire TinyWireM
@@ -22,7 +24,7 @@ const byte schedule[][3] = {
   {dowFriday, 20, 37},
 };
 
-SoftwareSerial serial(5, 4);
+SoftwareSerial serial(PIN_UART_RX, PIN_UART_TX);
 volatile uint8_t portbhistory = 0xFF;     // default is high because the pull-up
 volatile boolean manualFlag = false;
 static unsigned long workTimer = 0;
