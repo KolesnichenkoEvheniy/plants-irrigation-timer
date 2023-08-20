@@ -11,7 +11,7 @@
 #define PIN_BTN_MANUAL PB3
 #define PIN_UART_TX PB4
 #define PIN_UART_RX PB5
-#define WORK_TIME 3000
+#define WORK_TIME 10000
 
 #define Wire TinyWireM
 
@@ -53,8 +53,8 @@ void setup() {
     serial.println("Unable to sync with the RTC");
   }
 
-  // serial.println("Chip status: ");
-  // serial.println(RTC.chipPresent());
+  serial.println("Chip status: ");
+  serial.println(RTC.chipPresent());
 
   wdt_reset(); // watchdog init
   // 15MS, 30MS, 60MS, 120MS, 250MS, 500MS, 1S, 2S, 4S, 8S
@@ -73,9 +73,9 @@ void loop() {
     serial.println("!!!Button click...");
     workTimer = millis();
 
-    manualFlag = false;
     setPumpStatus(true);
   }
+  manualFlag = false;
 
   static byte prevMin = 0;
   static byte currentMin = 0;
