@@ -19,9 +19,8 @@
 #define adc_enable()  (ADCSRA |=  (1<<ADEN)) // re-enable ADC
 
 const byte schedule[][3] = {
-  {dowSaturday, 7, 0},
+  {dowSaturday, 12, 0},
   {dowWednesday, 12, 0},
-  {dowFriday, 20, 37},
 };
 
 SoftwareSerial serial(PIN_UART_RX, PIN_UART_TX);
@@ -50,10 +49,10 @@ void setup() {
   setSyncProvider(RTC.get);  
 
   if (timeStatus() != timeSet) {
-    serial.println("Unable to sync with the RTC");
+    serial.println(F("Unable to sync with the RTC"));
   }
 
-  serial.println("Chip status: ");
+  serial.println(F("Chip status: "));
   serial.println(RTC.chipPresent());
 
   wdt_reset(); // watchdog init
@@ -70,7 +69,7 @@ void setup() {
 void loop() {
   manualBtn.tick();
   if (manualBtn.isClick() && !currentPumpState) {
-    serial.println("!!!Button click...");
+    serial.println(F("!!!Button click..."));
     workTimer = millis();
 
     setPumpStatus(true);
@@ -83,14 +82,17 @@ void loop() {
 
   if (!currentPumpState) {
     setSyncProvider(RTC.get);
+
+    serial.println();
+    serial.print(F("CURR TIME: ")); serial.print(hour()); serial.print(F(":")); serial.print(minute());
+    serial.println();
   }
 
-  serial.println("CURR TIME: "); serial.print(hour()); serial.print(":"); serial.print(minute());
   if (!currentPumpState && prevMin != currentMin) {
     prevMin = currentMin;
     for (byte i = 0; i < sizeof(schedule) / 3; i++) {
       if (schedule[i][0] == weekday() && schedule[i][1] == hour() && schedule[i][2] == minute()) {
-        serial.println("Enabling the pump...");
+        serial.println(F("Enabling the pump..."));
         workTimer = millis();
         setPumpStatus(true);
       }
@@ -109,7 +111,7 @@ void loop() {
 }
 
 void setPumpStatus(bool newState) {
-  serial.println("Change status: "); serial.print(newState);
+  serial.println(F("Change status: ")); serial.print(newState);
   currentPumpState = newState;
   if (newState == true) {
     pinMode(PIN_MOSFET, OUTPUT);
