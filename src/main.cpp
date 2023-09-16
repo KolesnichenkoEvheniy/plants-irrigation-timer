@@ -11,7 +11,7 @@
 #define PIN_BTN_MANUAL PB3
 #define PIN_UART_TX PB4
 #define PIN_UART_RX PB5
-#define WORK_TIME 10000
+#define WORK_TIME 15000
 
 #define Wire TinyWireM
 
